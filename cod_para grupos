@@ -1,0 +1,98 @@
+/**
+ * Gmail Alias Sender — Utilities
+ * --------------------------------
+ * Utilidades simples para:
+ * 1) Listar los alias de envío disponibles en tu cuenta de Gmail.
+ * 2) Enviar correos "desde" un alias validando primero que exista en "Enviar como".
+ *
+ * Requisitos:
+ * - El alias debe estar configurado en Gmail > Configuración > Cuentas e importación > "Enviar correo como".
+ * - Este script usa GmailApp (no requiere habilitar APIs avanzadas).
+ *
+ * Seguridad / Privacidad:
+ * - No dejes correos reales ni nombres propios en el código. Usa placeholders.
+ * - Configura el nombre del remitente en la llamada (senderName) o deja que Gmail use el predeterminado.
+ *
+ * @author TuNombre
+ * @license MIT
+ */
+
+/** Nombre remitente por defecto si no se pasa en la llamada. */
+const DEFAULT_SENDER_NAME = 'Tu Equipo';
+
+/**
+ * Devuelve el listado de alias de envío (las direcciones que puedes usar en "from").
+ * Útil para ver si tu alias ya está disponible.
+ *
+ * @returns {string[]} Arreglo con alias/direcciones configuradas en "Enviar como".
+ */
+function listAliases() {
+  const aliases = GmailApp.getAliases();
+  Logger.log('Aliases disponibles: %s', JSON.stringify(aliases, null, 2));
+  return aliases;
+}
+
+/**
+ * Indica si puedes enviar desde el alias indicado.
+ *
+ * @param {string} desiredFrom - Correo del alias a validar (p.ej. "alias@tu-dominio.com").
+ * @returns {boolean} true si el alias está disponible; de lo contrario false.
+ */
+function canSendFrom(desiredFrom) {
+  if (!desiredFrom) return false;
+  const aliases = GmailApp.getAliases() || [];
+  return aliases.indexOf(desiredFrom) !== -1;
+}
+
+/**
+ * Envía un correo validando que el alias exista en "Enviar como".
+ *
+ * @param {string} recipient - Destinatario (p.ej. "usuario@correo.com").
+ * @param {string} subject - Asunto del mensaje.
+ * @param {string} htmlBody - Cuerpo HTML del mensaje (el texto plano se envía vacío).
+ * @param {string} desiredFrom - Alias desde el cual enviar (debe existir en "Enviar como").
+ * @param {string} [senderName=DEFAULT_SENDER_NAME] - Nombre que verá el receptor como remitente.
+ * @returns {{ok: boolean, mode: string, from: string, to: string}} Resumen del envío.
+ * @throws {Error} Si el alias no está disponible o si GmailApp falla al enviar.
+ */
+function sendFromAliasIfAvailable(recipient, subject, htmlBody, desiredFrom, senderName) {
+  if (!recipient || !subject || !htmlBody || !desiredFrom) {
+    throw new Error('Parámetros insuficientes: recipient, subject, htmlBody y desiredFrom son obligatorios.');
+  }
+
+  if (!canSendFrom(desiredFrom)) {
+    throw new Error('Alias no disponible en tu cuenta: ' + desiredFrom);
+  }
+
+  const nameToUse = senderName || DEFAULT_SENDER_NAME;
+
+  GmailApp.sendEmail(recipient, subject, '', {
+    htmlBody: htmlBody,
+    from: desiredFrom,   // Debe existir en "Enviar como"
+    name: nameToUse
+  });
+
+  Logger.log('Envío OK desde %s hacia %s, modo: GmailApp (alias)', desiredFrom, recipient);
+  return { ok: true, mode: 'GmailApp (alias)', from: desiredFrom, to: recipient };
+}
+
+/**
+ * (Opcional) Prueba rápida de envío.
+ * - Reemplaza los placeholders ANTES de ejecutar.
+ * - Deja comentada si no la necesitas.
+ */
+function __test_sendFromAlias() {
+  const RECIPIENT   = 'destinatario@ejemplo.com';     // TODO: cambiar
+  const SUBJECT     = 'Prueba de envío con alias';
+  const HTML_BODY   = '<p>Hola 👋, esto es una <strong>prueba</strong> desde alias.</p>';
+  const DESIRED_FROM= 'alias@tu-dominio.com';         // TODO: cambiar (debe estar en "Enviar como")
+  const SENDER_NAME = 'Tu Equipo de Pruebas';         // Opcional
+
+  try {
+    const result = sendFromAliasIfAvailable(RECIPIENT, SUBJECT, HTML_BODY, DESIRED_FROM, SENDER_NAME);
+    Logger.log(JSON.stringify(result));
+  } catch (err) {
+    Logger.log('Error en __test_sendFromAlias: %s', err && err.message ? err.message : err);
+    throw err;
+  }
+}
