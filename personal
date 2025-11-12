@@ -1,0 +1,69 @@
+/**
+ * Gmail Sender (Propia Cuenta)
+ * --------------------------------
+ * Envía correos electrónicos directamente **desde la cuenta ejecutora**
+ * (la misma que ejecuta el script) usando `MailApp`.
+ *
+ * Diferencias respecto a GmailApp:
+ * - `MailApp` usa el remitente de la cuenta propietaria del script (no admite alias).
+ * - Ideal para automatizaciones, reportes internos, o recordatorios.
+ *
+ * Requisitos:
+ * - El script debe ejecutarse con una cuenta que tenga permiso de envío (p. ej. tu propia cuenta de Gmail).
+ * - No se necesita configuración de alias ni "Enviar como".
+ *
+ * Seguridad / Privacidad:
+ * - No dejes correos reales ni nombres propios en el código.
+ * - Usa placeholders o variables configuradas vía PropertiesService.
+ *
+ * @example
+ * sendFromExecutor('destinatario@ejemplo.com', 'Reporte Diario', '<p>Hola, este es el resumen...</p>');
+ *
+ * @author TuNombre
+ * @license MIT
+ */
+
+/**
+ * Envía un correo electrónico usando la cuenta ejecutora del script.
+ *
+ * @param {string} recipient - Dirección de correo del destinatario.
+ * @param {string} subject - Asunto del correo.
+ * @param {string} body - Cuerpo del mensaje en formato HTML.
+ * @returns {{ok: boolean, mode: string, to: string}} Resumen del envío.
+ *
+ * @throws {Error} Si faltan parámetros o el envío falla.
+ */
+function sendFromExecutor(recipient, subject, body) {
+  if (!recipient || !subject || !body) {
+    throw new Error('Parámetros insuficientes: recipient, subject y body son obligatorios.');
+  }
+
+  MailApp.sendEmail({
+    to: recipient,
+    subject: subject,
+    htmlBody: body,
+    noReply: false // permite responder directamente al remitente original
+  });
+
+  Logger.log('Correo enviado correctamente desde la cuenta ejecutora hacia %s', recipient);
+  return { ok: true, mode: 'MailApp', to: recipient };
+}
+
+/**
+ * (Opcional) Prueba de envío local.
+ * - Reemplaza los placeholders antes de ejecutar.
+ * - Solo envía desde TU cuenta (no requiere alias).
+ */
+function __test_sendFromExecutor() {
+  const RECIPIENT = 'destinatario@ejemplo.com'; // TODO: cambiar
+  const SUBJECT   = 'Prueba de envío desde cuenta ejecutora';
+  const BODY      = '<p>Hola 👋, este es un correo enviado <strong>desde mi propia cuenta</strong>.</p>';
+
+  try {
+    const result = sendFromExecutor(RECIPIENT, SUBJECT, BODY);
+    Logger.log(JSON.stringify(result));
+  } catch (err) {
+    Logger.log('Error en __test_sendFromExecutor: %s', err.message || err);
+    throw err;
+  }
+}
